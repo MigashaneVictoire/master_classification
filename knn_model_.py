@@ -5,6 +5,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import itertools
 
 # sklearn imports
 from sklearn.metrics import confusion_matrix
@@ -17,6 +18,17 @@ from sklearn.neighbors import KNeighborsClassifier
 import sys
 sys.path.append("/Users/migashane/CodeUp/Data_Science/classification-exercises")
 import prepare
+
+def combinations_of_features_(feature_col: list) -> list:
+    """
+    Goal: retrieve all combination of the features
+    """
+    combinations = []
+    # combinations
+    for feature in range(1, len(feature_col) + 1):
+        combinations.extend(itertools.combinations(feature_col, feature))
+
+    return combinations
 
 # for funtion annotations
 from typing import Union
@@ -177,51 +189,56 @@ def model_knn_(train: pd.DataFrame, validate: pd.DataFrame, test: pd.DataFrame,
               "classification_reports":(train_class_report,val_class_report), 
               "model_object":knn_estimator_obj}
     """
-    
+
     model_item_full_discription = {}
     model_information_dataframe = []
 
     # compute base line accuracy score
     baseLineAccuracy = accuracy_score(train[target_col],train[baseline_col])
 
-    for model in range(1, numer_of_models + 1):
-        # for iteration in range(1, numer_of_models + 1):
-            # step 1: separate features from target
-        xTrain, yTrain, xVal, yVal, xtest, yTest = feature_separation_(train, validate, test, 
-                                                                    feature_col, target_col)
-        # step 2: knn estimator object
-        knn_estimator_obj = train_model_(xTrain, yTrain, model)
+    # redifine training data based on combinations of features
+    combinations_ = combinations_of_features_(feature_col)
 
-        # step 3: make predictions
-        yPred, yPred_proba, yVal_pred, yVal_proba, predClasses = make_predictions_(knn_estimator_obj, xTrain, xVal)
-        
-        # # step 4: evaluate model
-        trainAccuracy, valAccuracy, train_confussion_matrix, validate_confussion_matrix = evaluate_model_(knn_estimator_obj, xTrain, yTrain, xVal, yVal, yPred, yVal_pred)
+    for combo in combinations_:
 
-        # classification replort
-        train_class_report = classification_report(yTrain, yPred)
-        val_class_report = classification_report(yVal, yVal_pred)
+        for model in range(1, numer_of_models + 1):
+            # for iteration in range(1, numer_of_models + 1):
+                # step 1: separate features from target
+            xTrain, yTrain, xVal, yVal, xtest, yTest = feature_separation_(train, validate, test, 
+                                                                        feature_col, target_col)
+            # step 2: knn estimator object
+            knn_estimator_obj = train_model_(xTrain, yTrain, model)
 
-        # create list of models
-        modelInfo = computed_models_dataframe_(trainAccuracy, valAccuracy, baseLineAccuracy, model)
-        model_information_dataframe.append(modelInfo)
+            # step 3: make predictions
+            yPred, yPred_proba, yVal_pred, yVal_proba, predClasses = make_predictions_(knn_estimator_obj, xTrain, xVal)
+            
+            # # step 4: evaluate model
+            trainAccuracy, valAccuracy, train_confussion_matrix, validate_confussion_matrix = evaluate_model_(knn_estimator_obj, xTrain, yTrain, xVal, yVal, yPred, yVal_pred)
 
-        # to facilitate unpackikn go varables I am using tuples in the dictionary
-        # these will all be returned to the user
-        model_return = {
-            "predictions": (yPred,yPred_proba),
-            "accuracy_scores": (trainAccuracy, valAccuracy),
-            "confusion_metrices": (train_confussion_matrix, validate_confussion_matrix),
-            "classification_reports": (train_class_report,val_class_report),
-            "model_object": knn_estimator_obj,
+            # classification replort
+            train_class_report = classification_report(yTrain, yPred)
+            val_class_report = classification_report(yVal, yVal_pred)
 
-        }
+            # create list of models
+            modelInfo = computed_models_dataframe_(trainAccuracy, valAccuracy, baseLineAccuracy, model)
+            model_information_dataframe.append(modelInfo)
 
-        # add full discripion of model to be returned to the user
-        model_item_full_discription[model] = model_return
+            # to facilitate unpackikn go varables I am using tuples in the dictionary
+            # these will all be returned to the user
+            model_return = {
+                "predictions": (yPred,yPred_proba),
+                "accuracy_scores": (trainAccuracy, valAccuracy),
+                "confusion_metrices": (train_confussion_matrix, validate_confussion_matrix),
+                "classification_reports": (train_class_report,val_class_report),
+                "model_object": knn_estimator_obj,
 
-    # get visuals
-    accuracy_differences_df = pd.DataFrame(model_information_dataframe)
-    models_visuals = create_visuals_(accuracy_differences_df)
+            }
 
-    return model_item_full_discription, accuracy_differences_df, models_visuals
+            # add full discripion of model to be returned to the user
+            model_item_full_discription[model] = model_return
+
+        # get visuals
+        accuracy_differences_df = pd.DataFrame(model_information_dataframe)
+        # models_visuals = create_visuals_(accuracy_differences_df)
+
+        return model_item_full_discription, accuracy_differences_df#, models_visuals
